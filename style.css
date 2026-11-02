@@ -1,0 +1,31 @@
+body {
+    color: white;
+    font-size: 16px;
+    font-family: 'new times roman';
+    background-color: black;
+    margin: 0;
+    padding: 0;
+    
+}
+
+.navbar {
+    background-color: black;
+    padding: 20px;
+    color: white;
+    font-size: 18px;
+    font-family: 'new times roman';
+    margin: 0;
+    border: 2px solid white;
+    border-radius: 20px;
+    text-align: center;
+    position: fixed;
+
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    margin: 0 10px;
+
+
+}
