@@ -8,12 +8,7 @@ body {
     min-height: 100vh;
 }
 
-div h1 .title {
-    font-size: 36px;
-    margin: 20px 0;
-    text-align: center;
-    margin-top: 100px;
-}
+
 
 .navbar {
     background-color: black;
@@ -26,15 +21,11 @@ div h1 .title {
     border-radius: 20px;
     text-align: center;
     position: fixed;
+    margin-top: 0px;
 
 }
 
-div h1 {
-    margin: 0;
-    font-size: 24px;
-    font-family: 'new times roman';
 
-}
 
 a {
     color: white;
@@ -45,11 +36,12 @@ a {
     margin-left: 10px;
 }
 
-h1 {
+.h1 {
     font-size: 36px;
     margin: 20px 0;
     text-align: center;
     margin-top: 100px;
+    margin-left: 10px;
 }
 
 
@@ -74,7 +66,7 @@ div form {
     margin-top: 20px;
 }
 
-button .login-button {
+.login-button {
     background-color: black;
     color: white;
     border: 2px solid white;
@@ -82,5 +74,5 @@ button .login-button {
     font-size: 16px;
     cursor: pointer;
     margin-top: 10px;
-    margin-left: 580px;
+    margin-left: 593px;
 }
