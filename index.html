@@ -16,7 +16,13 @@
 
 
     <main>
-        <section id="signup-screen">
+        <section id="welcome-screen">
+            <h1 class="h1">Välkommen till LBS Radarn</h1>
+            <p>Logga in eller skapa ett konto för att fortsätta.</p>
+            <button id="login-button">Logga in</button>
+            <button id="signup-button">Skapa konto</button>
+        </section>
+        <section id="signup-screen" class="signupscreen" hidden>
             <h1 class="h1">Skapa konto</h1>
             <form id="signup-form">
                 <label for="create-username">Email:</label>
@@ -38,7 +44,7 @@
             </form>
         </section>
 
-        <section id="login-screen">
+        <section id="login-screen" class="loginscreen" hidden>  
             <h1 class="h1">Logga in</h1>
             <form id="login-form">
                 <label for="user-username">Email/Användarnamn:</label>

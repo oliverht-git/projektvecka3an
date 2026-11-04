@@ -213,3 +213,13 @@ loginForm.addEventListener("submit", async function(event) {
         alert("Inloggningen kunde inte genomföras. Försök igen.");
     }
 });
+
+document.getElementById("login-button").addEventListener("click", function() {
+    showScreen("login-screen");
+    document.getElementById("user-username").focus();
+});
+
+document.getElementById("signup-button").addEventListener("click", function() {
+    showScreen("signup-screen");
+    document.getElementById("create-username").focus();
+});
