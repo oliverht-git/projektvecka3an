@@ -1,6 +1,7 @@
 const PASSWORD_HASH_ITERATIONS = 600000;
 const BCRYPT_ROUNDS = 10;
 const ACCOUNT_STORAGE_PREFIX = "lbsradarn.passwordHash:";
+const ACTIVE_ACCOUNT_KEY = "lbsradarn.activeAccount";
 let pendingAccount = null;
 
 function getAccountKey(email) {
@@ -204,6 +205,7 @@ loginForm.addEventListener("submit", async function(event) {
                 account.passwordHash = await hashPassword(password);
                 localStorage.setItem(getAccountKey(email), JSON.stringify(account));
             }
+            localStorage.setItem(ACTIVE_ACCOUNT_KEY, email.trim().toLowerCase());
             window.location.href = "main.html";
         } else {
             alert("Fel e-postadress eller lösenord.");

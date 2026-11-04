@@ -22,8 +22,7 @@ body {
     text-align: center;
     position: absolute;
     margin-top: 0px;
-    left: 50%;
-    transform: translateX(-50%);
+
 }
 
 
@@ -36,6 +35,8 @@ a {
     margin-top: 10px;
     margin-left: 10px;
 }
+
+
 
 .h1 {
     font-size: 36px;
@@ -60,12 +61,6 @@ div .hide-signup-form {
     margin-left: 10px;
 }
 
-main form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 20px;
-}
 
 [hidden] {
     display: none !important;
@@ -82,3 +77,15 @@ main form {
     margin-left: 593px;
 }
 
+.account-name {
+    font-size: 24px;
+    margin: 0;
+    margin-top: 10px;
+    margin-left: 70em;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}

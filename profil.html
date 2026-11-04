@@ -9,19 +9,32 @@
 
     <div class="navbar">
         <a href="main.html"><h1 class="title">LBSradarn</h1></a>
+
+
     </div>
+<p id="display-name" class="account-name"></p>
 <body>
 
 
     <main>
         <section id="profile-screen">
             <h1 class="h1">Profil</h1>
-            <p id="display-name"></p>
+        </section>
+    </main>
+
+        <main>
+        <section id="settings-screen">
+
+            <form id="settings-form">
+                <label for="change-username">Ändra användarnamn:</label>
+                <input type="text" id="change-username" name="change-username" minlength="3" maxlength="20" required>
+                <input type="submit" value="Spara ändringar">
+            </form>
         </section>
     </main>
 
 
 
 </body>
-<script src="profil.js"></script>
+<script src="account.js"></script>
 </html>
