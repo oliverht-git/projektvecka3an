@@ -59,11 +59,15 @@ div .hide-signup-form {
     margin-left: 10px;
 }
 
-div form {
+main form {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-top: 20px;
+}
+
+[hidden] {
+    display: none !important;
 }
 
 .login-button {
