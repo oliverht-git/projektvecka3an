@@ -1,3 +1,38 @@
+const PASSWORD_HASH_ITERATIONS = 600000;
+
+async function hashPassword(password) {
+    if (typeof password !== "string" || password.length === 0) {
+        throw new TypeError("Password must be a non-empty string.");
+    }
+
+    if (!globalThis.crypto || !globalThis.crypto.subtle) {
+        throw new Error("Password hashing requires Web Crypto in a secure context.");
+    }
+
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(password),
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+    );
+    const hash = new Uint8Array(await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: PASSWORD_HASH_ITERATIONS,
+            hash: "SHA-256"
+        },
+        key,
+        256
+    ));
+
+    const saltBase64 = btoa(String.fromCharCode(...salt));
+    const hashBase64 = btoa(String.fromCharCode(...hash));
+    return `pbkdf2-sha256$${PASSWORD_HASH_ITERATIONS}$${saltBase64}$${hashBase64}`;
+}
+
 function myFunction() {
     if (document.getElementById("user-username").value === "admin" && document.getElementById("user-password").value === "password") {
         alert("Logged in successfully!");
@@ -39,5 +74,4 @@ loginForm.addEventListener("submit", function(event) {
     event.preventDefault();
     myFunction();
 });
-
 
