@@ -18,11 +18,12 @@ body {
     font-family: 'new times roman';
     margin: 0;
     border: 2px solid white;
-    border-radius: 20px;
+    border-radius: 0px;
     text-align: center;
-    position: fixed;
+    position: absolute;
     margin-top: 0px;
-
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 

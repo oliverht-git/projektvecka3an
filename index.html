@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LBSradarn</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="index.css">
 </head>
 
-<body>
+
     <div class="navbar">
         <h1 class="title">LBS Radarn</h1>
     </div>
+
+<body>
+
 
     <main>
         <section id="signup-screen">
@@ -38,8 +41,8 @@
         <section id="login-screen">
             <h1 class="h1">Logga in</h1>
             <form id="login-form">
-                <label for="user-username">Email:</label>
-                <input type="email" id="user-username" name="user-username" required>
+                <label for="user-username">Email/Användarnamn:</label>
+                <input type="Email/Avändarnamn" id="user-username" name="user-username" required>
                 <label for="user-password">Lösenord:</label>
                 <input type="password" id="user-password" name="user-password" required>
                 <input type="submit" value="Logga in">
@@ -47,6 +50,7 @@
         </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
     <script src="login.js"></script>
 </body>
 </html>

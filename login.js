@@ -1,4 +1,5 @@
 const PASSWORD_HASH_ITERATIONS = 600000;
+const BCRYPT_ROUNDS = 10;
 const ACCOUNT_STORAGE_PREFIX = "lbsradarn.passwordHash:";
 let pendingAccount = null;
 
@@ -17,35 +18,27 @@ async function hashPassword(password) {
         throw new TypeError("Password must be a non-empty string.");
     }
 
-    if (!globalThis.crypto || !globalThis.crypto.subtle) {
-        throw new Error("Password hashing requires Web Crypto in a secure context.");
+    if (new TextEncoder().encode(password).length > 72) {
+        throw new Error("Bcrypt passwords cannot exceed 72 bytes.");
     }
 
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const key = await crypto.subtle.importKey(
-        "raw",
-        new TextEncoder().encode(password),
-        "PBKDF2",
-        false,
-        ["deriveBits"]
-    );
-    const hash = new Uint8Array(await crypto.subtle.deriveBits(
-        {
-            name: "PBKDF2",
-            salt: salt,
-            iterations: PASSWORD_HASH_ITERATIONS,
-            hash: "SHA-256"
-        },
-        key,
-        256
-    ));
+    const bcrypt = globalThis.dcodeIO && globalThis.dcodeIO.bcrypt;
+    if (!bcrypt) {
+        throw new Error("Bcrypt is unavailable.");
+    }
 
-    const saltBase64 = btoa(String.fromCharCode(...salt));
-    const hashBase64 = btoa(String.fromCharCode(...hash));
-    return `pbkdf2-sha256$${PASSWORD_HASH_ITERATIONS}$${saltBase64}$${hashBase64}`;
+    return new Promise((resolve, reject) => {
+        bcrypt.hash(password, BCRYPT_ROUNDS, (error, hash) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(hash);
+            }
+        });
+    });
 }
 
-async function verifyPassword(password, encodedHash) {
+async function verifyLegacyPassword(password, encodedHash) {
     const [algorithm, iterations, saltBase64, expectedHashBase64] = encodedHash.split("$");
     if (algorithm !== "pbkdf2-sha256" || Number(iterations) !== PASSWORD_HASH_ITERATIONS || !saltBase64 || !expectedHashBase64) {
         throw new Error("Stored password hash has an invalid format.");
@@ -80,6 +73,27 @@ async function verifyPassword(password, encodedHash) {
         difference |= actualHash[index] ^ expectedHash[index];
     }
     return difference === 0;
+}
+
+async function verifyPassword(password, encodedHash) {
+    const bcrypt = globalThis.dcodeIO && globalThis.dcodeIO.bcrypt;
+    if (!bcrypt) {
+        throw new Error("Bcrypt is unavailable.");
+    }
+
+    if (new TextEncoder().encode(password).length > 72) {
+        return false;
+    }
+
+    return new Promise((resolve, reject) => {
+        bcrypt.compare(password, encodedHash, (error, matches) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(matches);
+            }
+        });
+    });
 }
 
 const signupForm = document.getElementById("signup-form");
@@ -181,7 +195,15 @@ loginForm.addEventListener("submit", async function(event) {
             throw new Error("Stored account has no password hash.");
         }
 
-        if (await verifyPassword(password, passwordHash)) {
+        const isLegacyHash = passwordHash.startsWith("pbkdf2-sha256$");
+        const passwordMatches = isLegacyHash
+            ? await verifyLegacyPassword(password, passwordHash)
+            : await verifyPassword(password, passwordHash);
+        if (passwordMatches) {
+            if (isLegacyHash && new TextEncoder().encode(password).length <= 72) {
+                account.passwordHash = await hashPassword(password);
+                localStorage.setItem(getAccountKey(email), JSON.stringify(account));
+            }
             window.location.href = "main.html";
         } else {
             alert("Fel e-postadress eller lösenord.");
