@@ -6,15 +6,14 @@
     <title>LBSradarn</title>
     <link rel="stylesheet" href="profil.css">
 </head>
+<body>
 
     <div class="navbar">
         <a href="main.html"><h1 class="title">LBSradarn</h1></a>
-
-
+        <a href="chatt.html">Chatt</a>
     </div>
 <p id="display-name" class="account-name"></p>
-<img id="profile-picture-display" class="profile-picture" alt="Profilbild">
-<body>
+<img id="profile-picture-display" class="profile-picture" src="normalpfp.svg" alt="Profilbild">
 
 
     <main>
@@ -23,10 +22,35 @@
         </section>
     </main>
 
+    <section id="incoming-requests" class="incoming-requests" aria-labelledby="incoming-requests-title">
+        <h2 id="incoming-requests-title">Förfrågningar</h2>
+        <p id="requests-status" role="status">Laddar förfrågningar...</p>
+        <div id="requests-list" class="requests-list"></div>
+    </section>
+
+    <section class="profile-friends">
+        <button id="toggle-profile-friends" type="button" aria-expanded="false" aria-controls="profile-friends-list">
+            Visa vänlista
+        </button>
+        <div id="profile-friends-list" class="friends-list" hidden>
+            <p id="profile-friends-status" role="status">Vänlistan är stängd.</p>
+            <div id="profile-friends-items"></div>
+        </div>
+    </section>
+
+    <dialog id="remove-friend-dialog" class="confirm-dialog" aria-labelledby="remove-friend-title">
+        <h2 id="remove-friend-title">Ta bort vän?</h2>
+        <p id="remove-friend-message">Är du säker på att du vill ta bort denna användaren?</p>
+        <div class="confirm-dialog-actions">
+            <button id="cancel-remove-friend" type="button">Avbryt</button>
+            <button id="confirm-remove-friend" type="button">Ta bort</button>
+        </div>
+    </dialog>
+
         <main>
         <section id="settings-screen">
 
-            <form id="settings-form">
+            <form id="settings-form" class="sett">
                 <label for="change-username">Ändra användarnamn:</label>
                 <input type="text" id="change-username" name="change-username" minlength="3" maxlength="20" required>
                 <input type="submit" value="Spara ändringar">
@@ -34,9 +58,9 @@
         </section>
     </main>
 
-    <img type="file" id="profile-picture-input" accept="image/*" style="display: none;">
+    <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
     <button id="change-profile-picture-button" class="btn">Ändra profilbild</button>
 
+    <script src="account.js"></script>
 </body>
-<script src="account.js"></script>
 </html>

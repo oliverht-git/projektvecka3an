@@ -6,29 +6,61 @@
     <title>LBSradarn</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <div class="navbar">
     <h1>LBSradarn</h1>
-
-
-
     <div class="buttons">
-        <button id="profil-form" onclick="location.href='profil.html'">Profil</button>
+        <button id="open-friends-button" type="button">Vänner</button>
+        <button id="chat-button" onclick="location.href='chatt.html'">Chatt</button>
         <button id="settings-button" onclick="location.href='settings.html'">Inställningar</button>
     </div>
 
 </div>
-<p id="display-name" class="account-name"></p>
-<img id="profile-picture-display" class="profile-picture" alt="Profilbild">
 <body>
 
-<button id="yes" class="yes-btn">ja</button>
-<button id="no" class="no-btn">nej</button>
 
 
 
 
 
-</body>
+<p id="display-name" class="account-name"></p>
+<a href="profil.html" class="profile-picture-link" aria-label="Gå till profilsidan">
+    <img id="profile-picture-display" class="profile-picture" src="normalpfp.svg" alt="Profilbild">
+</a>
+
+<main class="discovery">
+    <h2>Upptäck profiler</h2>
+    <section id="profile-card" class="profile-card" aria-live="polite">
+        <img id="profile-card-picture" src="normalpfp.svg" alt="Profilbild">
+        <div class="profile-card-details">
+            <h3 id="profile-card-name"></h3>
+            <p id="profile-card-feedback" aria-live="polite"></p>
+        </div>
+    </section>
+    <p id="profile-card-status" class="profile-card-status" role="status">Laddar profiler...</p>
+    <div class="profile-actions">
+        <button id="no" class="no-btn" type="button" disabled>Nej</button>
+        <button id="yes" class="yes-btn" type="button" disabled>Ja</button>
+    </div>
+</main>
+
+<dialog id="friends-dialog" class="friends-dialog" aria-labelledby="friends-dialog-title">
+    <div class="friends-dialog-header">
+        <h2 id="friends-dialog-title">Vänner</h2>
+        <button class="dialog-close" type="button" data-close-dialog="friends-dialog" aria-label="Stäng">×</button>
+    </div>
+    <p id="friends-dialog-status" role="status">Laddar vänlistan...</p>
+    <div id="friends-dialog-list" class="friends-list"></div>
+</dialog>
+
+<dialog id="remove-friend-dialog" class="confirm-dialog" aria-labelledby="remove-friend-title">
+    <h2 id="remove-friend-title">Ta bort vän?</h2>
+    <p id="remove-friend-message">Är du säker på att du vill ta bort denna användaren?</p>
+    <div class="confirm-dialog-actions">
+        <button id="cancel-remove-friend" type="button">Avbryt</button>
+        <button id="confirm-remove-friend" type="button">Ta bort</button>
+    </div>
+</dialog>
+
 <script src="account.js"></script>
+</body>
 </html>

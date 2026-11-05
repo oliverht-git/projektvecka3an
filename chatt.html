@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LBSradarn</title>
+    <link rel="stylesheet" href="chatt.css">
+</head>
+<body>
+    <header class="chat-header">
+        <h1>Chatt</h1>        
+        <a href="main.html">Tillbaka</a>
+        <a href="profil.html" aria-label="Gå till profilen">
+            <img id="profile-picture-display" class="profile-picture" src="normalpfp.svg" alt="Profilbild">
+        </a>
+    </header>
+    <main class="chat-layout">
+        <aside class="conversation-panel" aria-label="Konversationer">
+            <h2>Konversationer</h2>
+            <p id="conversation-status" role="status">Laddar konversationer...</p>
+            <div id="conversation-list" class="conversation-list"></div>
+        </aside>
+        <section class="message-panel" aria-label="Meddelanden">
+            <div id="chat-empty-state" class="chat-empty-state">Välj en konversation för att börja chatta.</div>
+            <div id="active-chat" class="active-chat" hidden>
+                <header class="active-chat-header">
+                    <img id="active-chat-picture" src="normalpfp.svg" alt="">
+                    <h2 id="active-chat-name"></h2>
+                </header>
+                <div id="message-list" class="message-list" aria-live="polite"></div>
+                <p id="message-status" class="message-status" role="status"></p>
+                <form id="message-form" class="message-form">
+                    <label class="visually-hidden" for="message-input">Skriv ett meddelande</label>
+                    <input id="message-input" name="message" type="text" maxlength="2000" autocomplete="off" placeholder="Skriv ett meddelande..." required>
+                    <button id="send-message-button" type="submit">Skicka</button>
+                </form>
+            </div>
+        </section>
+    </main>
+    <script src="account.js"></script>
+    <script src="chat.js"></script>
+</body>
+</html>
