@@ -222,6 +222,62 @@ function createServer() {
                 }
                 response.setHeader("Cache-Control", "no-store");
 
+                if (request.method === "GET" && url.pathname === "/api/admin/users") {
+                    const userData = await ensureUserIds();
+                    const reports = Array.isArray(userData.reports) ? userData.reports : [];
+                    const users = userData.users.map(user => ({
+                        id: user.id,
+                        email: user.email,
+                        username: typeof user.username === "string" && user.username.trim()
+                            ? user.username.trim()
+                            : "Användare",
+                        active: user.active === true,
+                        reportCount: reports.filter(report => report.reportedUserId === user.id).length,
+                        profilePicture: typeof user.profilePicture === "string"
+                            ? user.profilePicture
+                            : null
+                    }));
+                    sendJson(response, 200, { users });
+                    return;
+                }
+
+                const adminUserMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+                if (request.method === "DELETE" && adminUserMatch) {
+                    const deleted = await updateUsers((users, userData) => {
+                        const userId = decodeURIComponent(adminUserMatch[1]);
+                        const index = users.findIndex(user => user.id === userId);
+                        if (index === -1) {
+                            return false;
+                        }
+
+                        users.splice(index, 1);
+                        if (Array.isArray(userData.requests)) {
+                            userData.requests = userData.requests.filter(entry =>
+                                entry.fromId !== userId && entry.toId !== userId);
+                        }
+                        if (Array.isArray(userData.chats)) {
+                            userData.chats = userData.chats.filter(chat =>
+                                !chat.participantIds.includes(userId));
+                        }
+                        for (const key of ["skips", "userBlocks"]) {
+                            if (Array.isArray(userData[key])) {
+                                userData[key] = userData[key].filter(entry =>
+                                    entry.viewerId !== userId
+                                    && entry.targetId !== userId
+                                    && entry.reporterId !== userId
+                                    && entry.blockedUserId !== userId);
+                            }
+                        }
+                        return true;
+                    });
+                    if (!deleted) {
+                        sendJson(response, 404, { error: "User not found." });
+                        return;
+                    }
+                    sendJson(response, 200, { ok: true });
+                    return;
+                }
+
                 if (request.method === "GET" && url.pathname === "/api/admin/reports") {
                     const userData = await readUsers();
                     const reports = (Array.isArray(userData.reports) ? userData.reports : [])
@@ -257,6 +313,24 @@ function createServer() {
                         }
                         match.status = status;
                         match.updatedAt = new Date().toISOString();
+                        const pairHasActiveReport = reports.some(entry =>
+                            entry.reporterId === match.reporterId
+                            && entry.reportedUserId === match.reportedUserId
+                            && entry.status !== "dismissed"
+                        );
+                        userData.userBlocks = Array.isArray(userData.userBlocks) ? userData.userBlocks : [];
+                        userData.userBlocks = userData.userBlocks.filter(block =>
+                            !(block.reporterId === match.reporterId
+                                && block.blockedUserId === match.reportedUserId)
+                        );
+                        if (pairHasActiveReport) {
+                            userData.userBlocks.push({
+                                reporterId: match.reporterId,
+                                blockedUserId: match.reportedUserId,
+                                reportId: match.id,
+                                createdAt: match.updatedAt
+                            });
+                        }
                         return match;
                     });
                     if (!report) {
@@ -397,6 +471,17 @@ function createServer() {
                         participants
                     };
                     userData.reports.push(report);
+                    userData.userBlocks = Array.isArray(userData.userBlocks) ? userData.userBlocks : [];
+                    if (!userData.userBlocks.some(block =>
+                        block.reporterId === reporter.id && block.blockedUserId === target.id
+                    )) {
+                        userData.userBlocks.push({
+                            reporterId: reporter.id,
+                            blockedUserId: target.id,
+                            reportId: report.id,
+                            createdAt: report.createdAt
+                        });
+                    }
                     return { report };
                 });
                 if (result.error) {
@@ -810,6 +895,9 @@ function createServer() {
                             profilePicture: typeof peer.profilePicture === "string"
                                 ? peer.profilePicture
                                 : null,
+                            canSendMessage: !(Array.isArray(userData.userBlocks)
+                                && userData.userBlocks.some(block =>
+                                    block.reporterId === peer.id && block.blockedUserId === user.id)),
                             lastMessage: lastMessage ? lastMessage.text : "",
                             updatedAt: lastMessage ? lastMessage.createdAt : chat.createdAt
                         };
@@ -843,7 +931,11 @@ function createServer() {
                     text: message.text,
                     createdAt: message.createdAt
                 }));
-                sendJson(response, 200, { userId: user.id, messages });
+                const peerId = chat.participantIds.find(id => id !== user.id);
+                const canSendMessage = !(Array.isArray(userData.userBlocks)
+                    && userData.userBlocks.some(block =>
+                        block.reporterId === peerId && block.blockedUserId === user.id));
+                sendJson(response, 200, { userId: user.id, canSendMessage, messages });
                 return;
             }
 
@@ -870,6 +962,13 @@ function createServer() {
                         return null;
                     }
 
+                    const peerId = chat.participantIds.find(id => id !== sender.id);
+                    const isBlocked = (Array.isArray(userData.userBlocks) ? userData.userBlocks : [])
+                        .some(block => block.reporterId === peerId && block.blockedUserId === sender.id);
+                    if (isBlocked) {
+                        return { blocked: true };
+                    }
+
                     chat.messages = Array.isArray(chat.messages) ? chat.messages : [];
                     const savedMessage = {
                         id: randomUUID(),
@@ -886,14 +985,18 @@ function createServer() {
                             ? sender.username.trim()
                             : "Användare"
                     });
-                    return savedMessage;
+                    return { message: savedMessage };
                 });
-                if (!message) {
+                if (message && message.blocked) {
+                    sendJson(response, 403, { error: "You cannot message this user because they reported you." });
+                    return;
+                }
+                if (!message || !message.message) {
                     sendJson(response, 404, { error: "Chat not found." });
                     return;
                 }
 
-                sendJson(response, 201, { message });
+                sendJson(response, 201, { message: message.message });
                 return;
             }
 

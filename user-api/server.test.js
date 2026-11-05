@@ -328,19 +328,6 @@ test("reports profile pictures and chat messages and protects the admin report l
     const reportedProfile = profiles.find(profile => profile.username === "Reported User");
     assert.ok(reportedProfile);
 
-    const profileReportResponse = await fetch(`${baseUrl}/api/reports`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            reporterEmail: "reporter@example.com",
-            targetType: "profile",
-            targetId: reportedProfile.id,
-            reason: "olämplig profilbild",
-            details: "Anmäld profilbild"
-        })
-    });
-    assert.equal(profileReportResponse.status, 201);
-
     const requestResponse = await fetch(`${baseUrl}/api/users/requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -394,6 +381,40 @@ test("reports profile pictures and chat messages and protects the admin report l
     });
     assert.equal(messageReportResponse.status, 201);
 
+    const blockedMessageResponse = await fetch(chatUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reported@example.com", text: "Det här ska blockeras" })
+    });
+    assert.equal(blockedMessageResponse.status, 403);
+    const reporterMessageResponse = await fetch(chatUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reporter@example.com", text: "Det här tillåts" })
+    });
+    assert.equal(reporterMessageResponse.status, 201);
+    const reporterChatListResponse = await fetch(
+        `${baseUrl}/api/chats?email=${encodeURIComponent("reporter@example.com")}`
+    );
+    assert.equal((await reporterChatListResponse.json()).chats[0].canSendMessage, true);
+    const reportedChatListResponse = await fetch(
+        `${baseUrl}/api/chats?email=${encodeURIComponent("reported@example.com")}`
+    );
+    assert.equal((await reportedChatListResponse.json()).chats[0].canSendMessage, false);
+
+    const profileReportResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            reporterEmail: "reporter@example.com",
+            targetType: "profile",
+            targetId: reportedProfile.id,
+            reason: "olämplig profilbild",
+            details: "Anmäld profilbild"
+        })
+    });
+    assert.equal(profileReportResponse.status, 201);
+
     const unauthorizedResponse = await fetch(`${baseUrl}/api/admin/reports`);
     assert.equal(unauthorizedResponse.status, 401);
     const invalidTokenResponse = await fetch(`${baseUrl}/api/admin/reports`, {
@@ -413,8 +434,15 @@ test("reports profile pictures and chat messages and protects the admin report l
     assert.equal(messageReport.messageText, "Meddelandet som anmäls");
     assert.deepEqual(
         messageReport.chatLog.map(message => message.text),
-        ["Tidigare meddelande", "Meddelandet som anmäls"]
+        ["Tidigare meddelande", "Meddelandet som anmäls", "Det här tillåts"]
     );
+    const usersResponse = await fetch(`${baseUrl}/api/admin/users`, {
+        headers: { Authorization: "Bearer test-admin-token" }
+    });
+    assert.equal(usersResponse.status, 200);
+    const { users } = await usersResponse.json();
+    assert.equal(users.some(user => user.id === reportedProfile.id), true);
+    assert.equal(users.find(user => user.id === reportedProfile.id).reportCount, 2);
 
     const statusResponse = await fetch(
         `${baseUrl}/api/admin/reports/${encodeURIComponent(messageReport.id)}/status`,
@@ -428,6 +456,69 @@ test("reports profile pictures and chat messages and protects the admin report l
         }
     );
     assert.equal(statusResponse.status, 200);
+
+    const dismissResponse = await fetch(
+        `${baseUrl}/api/admin/reports/${encodeURIComponent(messageReport.id)}/status`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: "Bearer test-admin-token",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "dismissed" })
+        }
+    );
+    assert.equal(dismissResponse.status, 200);
+    const stillBlockedResponse = await fetch(chatUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reported@example.com", text: "En annan anmälan är fortfarande aktiv" })
+    });
+    assert.equal(stillBlockedResponse.status, 403);
+    const dismissProfileResponse = await fetch(
+        `${baseUrl}/api/admin/reports/${encodeURIComponent(profileReport.id)}/status`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: "Bearer test-admin-token",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "dismissed" })
+        }
+    );
+    assert.equal(dismissProfileResponse.status, 200);
+    const unblockedMessageResponse = await fetch(chatUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reported@example.com", text: "Anmälan nekades" })
+    });
+    assert.equal(unblockedMessageResponse.status, 201);
+
+    const deleteResponse = await fetch(
+        `${baseUrl}/api/admin/users/${encodeURIComponent(reportedProfile.id)}`,
+        {
+            method: "DELETE",
+            headers: { Authorization: "Bearer test-admin-token" }
+        }
+    );
+    assert.equal(deleteResponse.status, 200);
+    const usersAfterDeleteResponse = await fetch(`${baseUrl}/api/admin/users`, {
+        headers: { Authorization: "Bearer test-admin-token" }
+    });
+    assert.equal(
+        (await usersAfterDeleteResponse.json()).users.some(user => user.id === reportedProfile.id),
+        false
+    );
+    const reportsAfterDeleteResponse = await fetch(`${baseUrl}/api/admin/reports`, {
+        headers: { Authorization: "Bearer test-admin-token" }
+    });
+    const reportsAfterDelete = (await reportsAfterDeleteResponse.json()).reports;
+    assert.equal(reportsAfterDelete.length, 2);
+    assert.deepEqual(
+        reportsAfterDelete.find(report => report.targetType === "message").chatLog
+            .map(message => message.text),
+        ["Tidigare meddelande", "Meddelandet som anmäls", "Det här tillåts", "Anmälan nekades"]
+    );
 });
 
 test("generates and prints an admin key when one is not configured", async () => {

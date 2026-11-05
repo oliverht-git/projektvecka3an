@@ -23,7 +23,11 @@
             </form>
             <p id="admin-login-status" role="status"></p>
         </section>
-        <section id="admin-reports-panel" class="admin-panel" hidden>
+        <nav id="admin-navigation" class="admin-navigation" aria-label="Adminverktyg" hidden>
+            <button id="show-reports-button" type="button" aria-current="page">Anmälningar</button>
+            <button id="show-users-button" type="button">Användare</button>
+        </nav>
+        <section id="admin-reports-panel" class="admin-panel admin-content-panel" hidden>
             <div class="reports-heading">
                 <h2>Inkomna anmälningar</h2>
                 <button id="refresh-reports" type="button">Uppdatera</button>
@@ -31,7 +35,25 @@
             <p id="admin-reports-status" role="status">Laddar anmälningar...</p>
             <div id="admin-reports-list"></div>
         </section>
+        <section id="admin-users-panel" class="admin-panel admin-content-panel" hidden>
+            <div class="reports-heading">
+                <h2>Alla användare</h2>
+                <button id="refresh-users" type="button">Uppdatera</button>
+            </div>
+            <p id="admin-users-status" role="status">Laddar användare...</p>
+            <div id="admin-users-list"></div>
+        </section>
     </main>
+    <dialog id="delete-user-dialog" class="delete-user-dialog" aria-labelledby="delete-user-title">
+        <h2 id="delete-user-title">Ta bort konto?</h2>
+        <p id="delete-user-message"></p>
+        <p>Kontot, dess vänskaper och konversationer tas bort. Anmälningar och chattloggar sparas för granskningshistorik.</p>
+        <p id="delete-user-status" role="status"></p>
+        <div class="report-card-actions">
+            <button id="cancel-delete-user" type="button">Avbryt</button>
+            <button id="confirm-delete-user" type="button">Ta bort konto</button>
+        </div>
+    </dialog>
     <script src="admin.js"></script>
 </body>
 </html>

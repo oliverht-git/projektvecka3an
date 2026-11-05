@@ -17,6 +17,7 @@ let selectedChatId = new URLSearchParams(window.location.search).get("id");
 let isLoadingChats = false;
 let isLoadingMessages = false;
 let isSendingMessage = false;
+let canSendSelectedChat = true;
 
 function formatMessageTime(value) {
     const date = new Date(value);
@@ -66,6 +67,11 @@ function renderConversations() {
 
 function selectChat(chat) {
     selectedChatId = chat.id;
+    canSendSelectedChat = chat.canSendMessage !== false;
+    messageForm.hidden = !canSendSelectedChat;
+    messageStatus.textContent = canSendSelectedChat
+        ? ""
+        : "Du kan inte skriva till den här användaren eftersom hen har anmält dig.";
     emptyState.hidden = true;
     activeChat.hidden = false;
     activeChatName.textContent = chat.username;
@@ -101,6 +107,11 @@ async function loadChats() {
 
         const selectedChat = chats.find(chat => chat.id === selectedChatId);
         if (selectedChat) {
+            canSendSelectedChat = selectedChat.canSendMessage !== false;
+            messageForm.hidden = !canSendSelectedChat;
+            if (!canSendSelectedChat) {
+                messageStatus.textContent = "Du kan inte skriva till den här användaren eftersom hen har anmält dig.";
+            }
             activeChatName.textContent = selectedChat.username;
             activeChatPicture.src = selectedChat.profilePicture || "normalpfp.svg";
             emptyState.hidden = true;
@@ -138,10 +149,16 @@ async function loadMessages() {
         }
 
         const result = await response.json();
-        if (!Array.isArray(result.messages) || typeof result.userId !== "string") {
+        if (!Array.isArray(result.messages) || typeof result.userId !== "string"
+            || typeof result.canSendMessage !== "boolean") {
             throw new Error("Servern returnerade en ogiltig meddelandelista.");
         }
 
+        canSendSelectedChat = result.canSendMessage;
+        messageForm.hidden = !canSendSelectedChat;
+        if (!canSendSelectedChat) {
+            messageStatus.textContent = "Du kan inte skriva till den här användaren eftersom hen har anmält dig.";
+        }
         const wasAtBottom = messageList.scrollHeight - messageList.scrollTop - messageList.clientHeight < 48;
         const previousLastMessage = messageList.lastElementChild && messageList.lastElementChild.dataset.messageId;
         messageList.replaceChildren();
@@ -176,7 +193,9 @@ async function loadMessages() {
             && result.messages[result.messages.length - 1].id !== previousLastMessage)) {
             messageList.scrollTop = messageList.scrollHeight;
         }
-        messageStatus.textContent = "";
+        if (canSendSelectedChat) {
+            messageStatus.textContent = "";
+        }
     } catch (error) {
         console.error("Kunde inte hämta meddelanden:", error);
         messageStatus.textContent = "Meddelandena kunde inte laddas. Försök igen.";
@@ -188,7 +207,7 @@ async function loadMessages() {
 messageForm.addEventListener("submit", async function(event) {
     event.preventDefault();
     const text = messageInput.value.trim();
-    if (!text || !selectedChatId || isSendingMessage) {
+    if (!text || !selectedChatId || isSendingMessage || !canSendSelectedChat) {
         return;
     }
 
@@ -202,6 +221,12 @@ messageForm.addEventListener("submit", async function(event) {
             body: JSON.stringify({ email: account.email, text })
         });
         if (!response.ok) {
+            if (response.status === 403) {
+                canSendSelectedChat = false;
+                messageForm.hidden = true;
+                messageStatus.textContent = "Du kan inte skriva till den här användaren eftersom hen har anmält dig.";
+                return;
+            }
             throw new Error(`Servern svarade med status ${response.status}.`);
         }
 

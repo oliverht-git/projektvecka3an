@@ -72,6 +72,72 @@ button:disabled {
     gap: 12px;
 }
 
+.admin-navigation {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.admin-navigation button[aria-current="page"] {
+    background: #454545;
+}
+
+.admin-content-panel[hidden] {
+    display: none;
+}
+
+.admin-user-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid #4d4d4d;
+    border-radius: 10px;
+    background: #222;
+}
+
+.admin-user-card img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.admin-user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.admin-user-details h3,
+.admin-user-details p {
+    margin: 4px 0;
+    overflow-wrap: anywhere;
+}
+
+.delete-user-button,
+#confirm-delete-user {
+    border-color: #b94a48;
+    background: #702d2b;
+}
+
+.delete-user-dialog {
+    width: min(460px, calc(100vw - 32px));
+    padding: 22px;
+    border: 1px solid #777;
+    border-radius: 12px;
+    background: #1b1b1b;
+    color: #fff;
+}
+
+.delete-user-dialog::backdrop {
+    background: rgb(0 0 0 / 75%);
+}
+
+.delete-user-dialog h2 {
+    margin-top: 0;
+}
+
 .report-card {
     margin-top: 16px;
     padding: 18px;
@@ -155,5 +221,14 @@ button:disabled {
     .report-card-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .admin-user-card {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .delete-user-button {
+        width: 100%;
     }
 }

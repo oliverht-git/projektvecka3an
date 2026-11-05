@@ -6,19 +6,49 @@ const tokenInput = document.getElementById("admin-token");
 const loginStatus = document.getElementById("admin-login-status");
 const reportsStatus = document.getElementById("admin-reports-status");
 const reportsList = document.getElementById("admin-reports-list");
+const usersPanel = document.getElementById("admin-users-panel");
+const usersStatus = document.getElementById("admin-users-status");
+const usersList = document.getElementById("admin-users-list");
+const adminNavigation = document.getElementById("admin-navigation");
+const showReportsButton = document.getElementById("show-reports-button");
+const showUsersButton = document.getElementById("show-users-button");
+const refreshUsersButton = document.getElementById("refresh-users");
+const deleteUserDialog = document.getElementById("delete-user-dialog");
+const deleteUserMessage = document.getElementById("delete-user-message");
+const deleteUserStatus = document.getElementById("delete-user-status");
+const confirmDeleteUserButton = document.getElementById("confirm-delete-user");
+const cancelDeleteUserButton = document.getElementById("cancel-delete-user");
 const logoutButton = document.getElementById("admin-logout");
 const refreshButton = document.getElementById("refresh-reports");
+let userToDelete = null;
 
 function showLogin() {
     loginPanel.hidden = false;
     reportsPanel.hidden = true;
+    usersPanel.hidden = true;
+    adminNavigation.hidden = true;
     logoutButton.hidden = true;
 }
 
 function showReports() {
     loginPanel.hidden = true;
     reportsPanel.hidden = false;
+    usersPanel.hidden = true;
+    adminNavigation.hidden = false;
     logoutButton.hidden = false;
+    showReportsButton.setAttribute("aria-current", "page");
+    showUsersButton.setAttribute("aria-current", "false");
+}
+
+function showAdminPanel(panelName) {
+    const showUsers = panelName === "users";
+    reportsPanel.hidden = showUsers;
+    usersPanel.hidden = !showUsers;
+    showReportsButton.setAttribute("aria-current", showUsers ? "false" : "page");
+    showUsersButton.setAttribute("aria-current", showUsers ? "page" : "false");
+    if (showUsers) {
+        loadUsers();
+    }
 }
 
 async function adminRequest(url, options = {}) {
@@ -101,7 +131,7 @@ function renderReports(reports) {
             ? "Öppen"
             : report.status === "reviewed"
             ? "Granskad"
-            : "Avfärdad";
+            : "Nekad";
         header.append(title, status);
 
         const metadata = document.createElement("p");
@@ -135,7 +165,7 @@ function renderReports(reports) {
 
         const actions = document.createElement("div");
         actions.className = "report-card-actions";
-        [["reviewed", "Markera granskad"], ["dismissed", "Avfärda"], ["open", "Öppna igen"]]
+        [["reviewed", "Markera granskad"], ["dismissed", "Neka anmälan"], ["open", "Öppna igen"]]
             .filter(([nextStatus]) => nextStatus !== report.status)
             .forEach(([nextStatus, label]) => {
                 const button = document.createElement("button");
@@ -147,6 +177,72 @@ function renderReports(reports) {
         card.append(actions);
         reportsList.append(card);
     });
+}
+
+function renderUsers(users) {
+    usersList.replaceChildren();
+    if (!users.length) {
+        usersStatus.textContent = "Det finns inga användarkonton.";
+        return;
+    }
+
+    usersStatus.textContent = `${users.length} användare`;
+    users.forEach(function(user) {
+        const card = document.createElement("article");
+        card.className = "admin-user-card";
+
+        if (user.profilePicture) {
+            const image = document.createElement("img");
+            image.src = user.profilePicture;
+            image.alt = "";
+            image.onerror = function() {
+                image.onerror = null;
+                image.remove();
+            };
+            card.append(image);
+        }
+
+        const details = document.createElement("div");
+        details.className = "admin-user-details";
+        const name = document.createElement("h3");
+        name.textContent = user.username;
+        const email = document.createElement("p");
+        email.textContent = user.email;
+        const state = document.createElement("p");
+        state.className = "report-status";
+        state.textContent = `${user.active ? "Aktiv" : "Inte aktiv"} · ${user.reportCount} anmälningar`;
+        details.append(name, email, state);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "delete-user-button";
+        deleteButton.textContent = "Ta bort konto";
+        deleteButton.addEventListener("click", function() {
+            userToDelete = user;
+            deleteUserMessage.textContent =
+                `Är du säker på att du vill ta bort kontot för ${user.username} (${user.email})?`;
+            deleteUserStatus.textContent = "";
+            confirmDeleteUserButton.disabled = false;
+            deleteUserDialog.showModal();
+        });
+
+        card.append(details, deleteButton);
+        usersList.append(card);
+    });
+}
+
+async function loadUsers() {
+    usersStatus.textContent = "Hämtar användare...";
+    try {
+        const result = await adminRequest("/api/admin/users");
+        if (!Array.isArray(result.users)) {
+            throw new Error("Servern returnerade en ogiltig användarlista.");
+        }
+        renderUsers(result.users);
+    } catch (error) {
+        console.error("Kunde inte hämta användarna:", error);
+        usersStatus.textContent = error.message;
+    }
 }
 
 async function loadReports() {
@@ -202,6 +298,34 @@ logoutButton.addEventListener("click", function() {
 });
 
 refreshButton.addEventListener("click", loadReports);
+refreshUsersButton.addEventListener("click", loadUsers);
+showReportsButton.addEventListener("click", () => showAdminPanel("reports"));
+showUsersButton.addEventListener("click", () => showAdminPanel("users"));
+cancelDeleteUserButton.addEventListener("click", function() {
+    deleteUserDialog.close();
+    userToDelete = null;
+});
+
+confirmDeleteUserButton.addEventListener("click", async function() {
+    if (!userToDelete) {
+        return;
+    }
+    confirmDeleteUserButton.disabled = true;
+    deleteUserStatus.textContent = "Tar bort kontot...";
+    try {
+        await adminRequest(`/api/admin/users/${encodeURIComponent(userToDelete.id)}`, {
+            method: "DELETE"
+        });
+        deleteUserDialog.close();
+        userToDelete = null;
+        await loadUsers();
+        await loadReports();
+    } catch (error) {
+        console.error("Kunde inte ta bort användaren:", error);
+        deleteUserStatus.textContent = error.message;
+        confirmDeleteUserButton.disabled = false;
+    }
+});
 
 if (window.location.protocol === "file:") {
     loginForm.hidden = true;
