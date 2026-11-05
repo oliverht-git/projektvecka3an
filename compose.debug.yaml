@@ -5,7 +5,8 @@ services:
       context: .
       dockerfile: ./Dockerfile
     environment:
-      JAVA_OPTS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y
+      PORT: 3006
     ports:
       - 3006:3006
-      - 5005:5005
+    volumes:
+      - ./user.json:/app/user.json

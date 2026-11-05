@@ -205,14 +205,32 @@ loginForm.addEventListener("submit", async function(event) {
                 account.passwordHash = await hashPassword(password);
                 localStorage.setItem(getAccountKey(email), JSON.stringify(account));
             }
-            localStorage.setItem(ACTIVE_ACCOUNT_KEY, email.trim().toLowerCase());
+            const normalizedEmail = email.trim().toLowerCase();
+            const response = await fetch("/api/users/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: normalizedEmail,
+                    username: typeof account.username === "string" && account.username.trim()
+                        ? account.username.trim()
+                        : normalizedEmail
+                })
+            });
+            if (!response.ok) {
+                const result = await response.json().catch(() => ({}));
+                throw new Error(result.error || `Servern svarade med status ${response.status}.`);
+            }
+            localStorage.setItem(ACTIVE_ACCOUNT_KEY, normalizedEmail);
             window.location.href = "main.html";
         } else {
             alert("Fel e-postadress eller lösenord.");
         }
     } catch (error) {
         console.error("Kunde inte verifiera lösenord:", error);
-        alert("Inloggningen kunde inte genomföras. Försök igen.");
+        const message = error instanceof TypeError
+            ? "Servern kunde inte nås. Kontrollera att appen är startad med npm start."
+            : error.message;
+        alert(`Inloggningen kunde inte genomföras: ${message}`);
     }
 });
 

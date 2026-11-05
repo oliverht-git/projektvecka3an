@@ -1,3 +1,12 @@
-"dependencies": {
-    "bcrypt": "^5.1.0",
+{
+  "name": "lbsradarn",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node user-api/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@supabase/server": "^1.9.2"
+  }
 }

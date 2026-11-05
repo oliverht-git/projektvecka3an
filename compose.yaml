@@ -6,3 +6,5 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - 3006:3006
+    volumes:
+      - ./user.json:/app/user.json
