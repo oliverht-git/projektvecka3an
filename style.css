@@ -309,3 +309,63 @@ div .hide-signup-form {
     cursor: wait;
     opacity: 0.6;
 }
+
+.notifications {
+    width: min(100% - 32px, 380px);
+    margin: 150px auto 0;
+    padding: 18px;
+    border: 1px solid #777;
+    border-radius: 16px;
+    background: #171717;
+    box-sizing: border-box;
+}
+
+.notifications h2 {
+    margin: 0 0 10px;
+}
+
+.notifications > p {
+    margin: 0;
+    color: #d9dce1;
+}
+
+.notifications-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.notification-link {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 12px;
+    background: #202124;
+    color: white;
+    text-decoration: none;
+}
+
+.notification-link:hover,
+.notification-link:focus-visible {
+    border-color: white;
+}
+
+.notification-time {
+    color: #b7bbc2;
+    font-size: 13px;
+}
+
+.notification-preview {
+    overflow: hidden;
+    color: #d9dce1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.discovery {
+    margin-top: 40px;
+}

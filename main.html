@@ -28,6 +28,12 @@
     <img id="profile-picture-display" class="profile-picture" src="normalpfp.svg" alt="Profilbild">
 </a>
 
+<section id="notifications" class="notifications" aria-labelledby="notifications-title">
+    <h2 id="notifications-title">Notiser</h2>
+    <p id="notifications-status" role="status" aria-live="polite">Laddar notiser...</p>
+    <ul id="notifications-list" class="notifications-list"></ul>
+</section>
+
 <main class="discovery">
     <h2>Upptäck profiler</h2>
     <section id="profile-card" class="profile-card" aria-live="polite">
@@ -89,6 +95,7 @@
 </dialog>
 
 <script src="account.js"></script>
+<script src="notifications.js"></script>
 <script src="report.js"></script>
 </body>
 </html>

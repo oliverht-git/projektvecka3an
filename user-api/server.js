@@ -899,6 +899,8 @@ function createServer() {
                                 && userData.userBlocks.some(block =>
                                     block.reporterId === peer.id && block.blockedUserId === user.id)),
                             lastMessage: lastMessage ? lastMessage.text : "",
+                            lastMessageId: lastMessage ? lastMessage.id : null,
+                            lastMessageFromPeer: lastMessage ? lastMessage.senderId === peer.id : false,
                             updatedAt: lastMessage ? lastMessage.createdAt : chat.createdAt
                         };
                     })

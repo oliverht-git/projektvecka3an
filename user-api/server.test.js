@@ -220,6 +220,20 @@ test("sends profile requests and accepts them from the recipient profile", async
     assert.equal(recipientMessages.messages.length, 1);
     assert.equal(recipientMessages.messages[0].text, "Hej!");
 
+    const updatedRecipientChatsResponse = await fetch(
+        `${baseUrl}/api/chats?email=${encodeURIComponent("recipient@example.com")}`
+    );
+    const updatedRecipientChats = await updatedRecipientChatsResponse.json();
+    assert.equal(updatedRecipientChats.chats[0].lastMessageId, recipientMessages.messages[0].id);
+    assert.equal(updatedRecipientChats.chats[0].lastMessageFromPeer, true);
+    assert.equal(updatedRecipientChats.chats[0].lastMessage, "Hej!");
+
+    const updatedRequesterChatsResponse = await fetch(
+        `${baseUrl}/api/chats?email=${encodeURIComponent("requester@example.com")}`
+    );
+    const updatedRequesterChats = await updatedRequesterChatsResponse.json();
+    assert.equal(updatedRequesterChats.chats[0].lastMessageFromPeer, false);
+
     const unauthorizedResponse = await fetch(
         `${chatUrl}?email=${encodeURIComponent("outsider@example.com")}`
     );

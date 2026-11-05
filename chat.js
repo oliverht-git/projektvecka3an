@@ -154,6 +154,18 @@ async function loadMessages() {
             throw new Error("Servern returnerade en ogiltig meddelandelista.");
         }
 
+        const lastMessage = result.messages[result.messages.length - 1];
+        if (lastMessage) {
+            try {
+                localStorage.setItem(
+                    `lbsradarn.lastReadMessage:${account.email}:${selectedChatId}`,
+                    lastMessage.id
+                );
+            } catch (error) {
+                console.error("Kunde inte spara lästa meddelanden:", error);
+            }
+        }
+
         canSendSelectedChat = result.canSendMessage;
         messageForm.hidden = !canSendSelectedChat;
         if (!canSendSelectedChat) {
