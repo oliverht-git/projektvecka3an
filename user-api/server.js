@@ -1,7 +1,7 @@
 const http = require("node:http");
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { randomUUID } = require("node:crypto");
+const { createHash, randomBytes, randomUUID, timingSafeEqual } = require("node:crypto");
 
 const ROOT = path.resolve(__dirname, "..");
 const USER_FILE = process.env.USER_FILE || path.join(ROOT, "user.json");
@@ -13,6 +13,20 @@ let updateQueue = Promise.resolve();
 function sendJson(response, statusCode, data) {
     response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
     response.end(JSON.stringify(data));
+}
+
+function authorizeAdmin(request, response, adminToken) {
+    const authorization = request.headers.authorization || "";
+    const suppliedToken = authorization.startsWith("Bearer ")
+        ? authorization.slice("Bearer ".length)
+        : "";
+    const expectedHash = createHash("sha256").update(adminToken.trim()).digest();
+    const suppliedHash = createHash("sha256").update(suppliedToken).digest();
+    if (!timingSafeEqual(expectedHash, suppliedHash)) {
+        sendJson(response, 401, { error: "Admin authorization is required." });
+        return false;
+    }
+    return true;
 }
 
 async function readUsers() {
@@ -191,9 +205,208 @@ function serveStaticFile(request, response, pathname) {
 }
 
 function createServer() {
+    const configuredToken = typeof process.env.ADMIN_TOKEN === "string"
+        ? process.env.ADMIN_TOKEN.trim()
+        : "";
+    const adminToken = configuredToken || randomBytes(32).toString("hex");
+    if (!configuredToken) {
+        console.log(`Adminnyckel (kopiera denna): ${adminToken}`);
+    }
+
     return http.createServer(async (request, response) => {
         const url = new URL(request.url, "http://localhost");
         try {
+            if (url.pathname.startsWith("/api/admin/")) {
+                if (!authorizeAdmin(request, response, adminToken)) {
+                    return;
+                }
+                response.setHeader("Cache-Control", "no-store");
+
+                if (request.method === "GET" && url.pathname === "/api/admin/reports") {
+                    const userData = await readUsers();
+                    const reports = (Array.isArray(userData.reports) ? userData.reports : [])
+                        .map(report => ({
+                            ...report,
+                            chatLog: report.chatId
+                                ? (Array.isArray(userData.chatLogs) ? userData.chatLogs : [])
+                                    .filter(message => message.chatId === report.chatId)
+                                    .sort((left, right) =>
+                                        Date.parse(left.createdAt) - Date.parse(right.createdAt))
+                                : []
+                        }))
+                        .sort((left, right) =>
+                            Date.parse(right.createdAt) - Date.parse(left.createdAt));
+                    sendJson(response, 200, { reports });
+                    return;
+                }
+
+                const reportStatusMatch = url.pathname.match(/^\/api\/admin\/reports\/([^/]+)\/status$/);
+                if (request.method === "POST" && reportStatusMatch) {
+                    const body = await readRequestBody(request);
+                    const status = body && typeof body.status === "string" ? body.status : "";
+                    if (!["open", "reviewed", "dismissed"].includes(status)) {
+                        sendJson(response, 400, { error: "Invalid report status." });
+                        return;
+                    }
+
+                    const report = await updateUsers((users, userData) => {
+                        const reports = Array.isArray(userData.reports) ? userData.reports : [];
+                        const match = reports.find(entry => entry.id === reportStatusMatch[1]);
+                        if (!match) {
+                            return null;
+                        }
+                        match.status = status;
+                        match.updatedAt = new Date().toISOString();
+                        return match;
+                    });
+                    if (!report) {
+                        sendJson(response, 404, { error: "Report not found." });
+                        return;
+                    }
+                    sendJson(response, 200, { report });
+                    return;
+                }
+
+                sendJson(response, 404, { error: "Admin endpoint not found." });
+                return;
+            }
+
+            if (request.method === "POST" && url.pathname === "/api/reports") {
+                const body = await readRequestBody(request);
+                const reporterEmail = body && typeof body.reporterEmail === "string"
+                    ? body.reporterEmail.trim().toLowerCase()
+                    : "";
+                const targetType = body && typeof body.targetType === "string" ? body.targetType : "";
+                const targetId = body && typeof body.targetId === "string" ? body.targetId : "";
+                const reason = body && typeof body.reason === "string" ? body.reason.trim() : "";
+                const details = body && typeof body.details === "string" ? body.details.trim() : "";
+                const allowedReasons = ["olämplig profilbild", "trakasserier", "hot", "spam", "annat"];
+                if (
+                    !reporterEmail
+                    || !["profile", "message"].includes(targetType)
+                    || !targetId
+                    || !allowedReasons.includes(reason)
+                    || details.length > 500
+                ) {
+                    sendJson(response, 400, { error: "Invalid report details." });
+                    return;
+                }
+
+                const result = await updateUsers((users, userData) => {
+                    const reporter = users.find(user => user.email === reporterEmail);
+                    if (!reporter) {
+                        return { error: "Reporter not found.", statusCode: 404 };
+                    }
+
+                    let target;
+                    let profilePicture = null;
+                    let chatId = null;
+                    let messageId = null;
+                    let messageText = null;
+                    let participants = [];
+                    if (targetType === "profile") {
+                        target = users.find(user => user.id === targetId);
+                        if (!target || target.id === reporter.id) {
+                            return { error: "Profile not found.", statusCode: 404 };
+                        }
+                        profilePicture = typeof target.profilePicture === "string"
+                            ? target.profilePicture
+                            : null;
+                    } else {
+                        const chats = Array.isArray(userData.chats) ? userData.chats : [];
+                        const chat = chats.find(entry =>
+                            Array.isArray(entry.participantIds) && entry.participantIds.includes(reporter.id)
+                            && (Array.isArray(entry.messages)
+                                ? entry.messages.some(message => message.id === targetId)
+                                : false)
+                        );
+                        const message = chat && chat.messages.find(entry => entry.id === targetId);
+                        if (!chat || !message || message.senderId === reporter.id) {
+                            return { error: "Message not found.", statusCode: 404 };
+                        }
+
+                        target = users.find(user => user.id === message.senderId);
+                        if (!target) {
+                            return { error: "Message sender not found.", statusCode: 404 };
+                        }
+                        chatId = chat.id;
+                        messageId = message.id;
+                        messageText = message.text;
+                        participants = chat.participantIds.map(id => {
+                            const participant = users.find(user => user.id === id);
+                            return {
+                                id,
+                                username: participant && typeof participant.username === "string"
+                                    ? participant.username.trim()
+                                    : "Användare"
+                            };
+                        });
+
+                        userData.chatLogs = Array.isArray(userData.chatLogs) ? userData.chatLogs : [];
+                        const loggedMessageIds = new Set(
+                            userData.chatLogs.filter(entry => entry.chatId === chat.id)
+                                .map(entry => entry.id)
+                        );
+                        chat.messages.forEach(entry => {
+                            if (!loggedMessageIds.has(entry.id)) {
+                                const sender = users.find(user => user.id === entry.senderId);
+                                userData.chatLogs.push({
+                                    id: entry.id,
+                                    chatId: chat.id,
+                                    senderId: entry.senderId,
+                                    senderName: sender && typeof sender.username === "string"
+                                        ? sender.username.trim()
+                                        : "Användare",
+                                    text: entry.text,
+                                    createdAt: entry.createdAt
+                                });
+                            }
+                        });
+                    }
+
+                    userData.reports = Array.isArray(userData.reports) ? userData.reports : [];
+                    const duplicate = userData.reports.some(report =>
+                        report.reporterId === reporter.id
+                        && report.targetType === targetType
+                        && report.targetId === targetId
+                    );
+                    if (duplicate) {
+                        return { error: "This item has already been reported.", statusCode: 409 };
+                    }
+
+                    const report = {
+                        id: randomUUID(),
+                        targetType,
+                        targetId,
+                        reporterId: reporter.id,
+                        reporterName: typeof reporter.username === "string"
+                            ? reporter.username.trim()
+                            : "Användare",
+                        reportedUserId: target.id,
+                        reportedUsername: typeof target.username === "string"
+                            ? target.username.trim()
+                            : "Användare",
+                        reason,
+                        details,
+                        status: "open",
+                        createdAt: new Date().toISOString(),
+                        profilePicture,
+                        chatId,
+                        messageId,
+                        messageText,
+                        participants
+                    };
+                    userData.reports.push(report);
+                    return { report };
+                });
+                if (result.error) {
+                    sendJson(response, result.statusCode, { error: result.error });
+                    return;
+                }
+                sendJson(response, 201, { ok: true, reportId: result.report.id });
+                return;
+            }
+
             if (request.method === "POST" && url.pathname === "/api/users/login") {
                 const body = await readRequestBody(request);
                 const email = body && typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -224,12 +437,43 @@ function createServer() {
             if (request.method === "GET" && url.pathname === "/api/users/profiles") {
                 const excludedEmail = (url.searchParams.get("exclude") || "").trim().toLowerCase();
                 const userData = await ensureUserIds();
+                const viewer = userData.users.find(user => user.email === excludedEmail);
+                const hiddenEmails = new Set([excludedEmail]);
+                if (viewer) {
+                    const usersById = new Map(userData.users.map(user => [user.id, user]));
+                    (Array.isArray(userData.requests) ? userData.requests : [])
+                        .filter(request =>
+                            (request.fromId === viewer.id || request.toId === viewer.id)
+                            && (request.status === "accepted" || request.status === "pending")
+                        )
+                        .forEach(request => {
+                            const otherUser = usersById.get(
+                                request.fromId === viewer.id ? request.toId : request.fromId
+                            );
+                            if (otherUser && typeof otherUser.email === "string") {
+                                hiddenEmails.add(otherUser.email.trim().toLowerCase());
+                            }
+                        });
+                }
+
+                const skipCounts = new Map();
+                (Array.isArray(userData.skips) ? userData.skips : [])
+                    .filter(skip => viewer && skip.viewerId === viewer.id)
+                    .forEach(skip => {
+                        skipCounts.set(skip.targetId, (skipCounts.get(skip.targetId) || 0) + skip.count);
+                    });
                 const seenEmails = new Set();
                 const seenIds = new Set();
                 const profiles = userData.users
                     .filter(user => {
                         const email = typeof user.email === "string" ? user.email.trim().toLowerCase() : "";
-                        if (!email || email === excludedEmail || seenEmails.has(email) || seenIds.has(user.id)) {
+                        if (
+                            !email
+                            || hiddenEmails.has(email)
+                            || seenEmails.has(email)
+                            || seenIds.has(user.id)
+                            || (viewer && (skipCounts.get(user.id) || 0) >= 4)
+                        ) {
                             return false;
                         }
                         seenEmails.add(email);
@@ -249,6 +493,52 @@ function createServer() {
                         };
                     });
                 sendJson(response, 200, { profiles });
+                return;
+            }
+
+            if (request.method === "POST" && url.pathname === "/api/users/skip") {
+                const body = await readRequestBody(request);
+                const email = body && typeof body.email === "string"
+                    ? body.email.trim().toLowerCase()
+                    : "";
+                const targetId = body && typeof body.targetId === "string" ? body.targetId : "";
+                if (!email || !targetId) {
+                    sendJson(response, 400, { error: "Email and profile ID are required." });
+                    return;
+                }
+
+                const result = await updateUsers((users, userData) => {
+                    const viewer = users.find(user => user.email === email);
+                    const target = users.find(user => user.id === targetId);
+                    if (!viewer || !target || viewer.id === target.id) {
+                        return { error: "Profile not found." };
+                    }
+
+                    const hasRelationship = (Array.isArray(userData.requests) ? userData.requests : [])
+                        .some(profileRequest =>
+                            (profileRequest.fromId === viewer.id && profileRequest.toId === target.id)
+                            || (profileRequest.fromId === target.id && profileRequest.toId === viewer.id)
+                        );
+                    if (hasRelationship) {
+                        return { error: "This profile is already connected or has a pending request." };
+                    }
+
+                    userData.skips = Array.isArray(userData.skips) ? userData.skips : [];
+                    let skip = userData.skips.find(entry =>
+                        entry.viewerId === viewer.id && entry.targetId === target.id
+                    );
+                    if (!skip) {
+                        skip = { viewerId: viewer.id, targetId: target.id, count: 0 };
+                        userData.skips.push(skip);
+                    }
+                    skip.count = Math.min(4, Number.isInteger(skip.count) ? skip.count + 1 : 1);
+                    return { remainingShows: Math.max(0, 4 - skip.count) };
+                });
+                if (result.error) {
+                    sendJson(response, 404, { error: result.error });
+                    return;
+                }
+                sendJson(response, 200, { ok: true, remainingShows: result.remainingShows });
                 return;
             }
 
@@ -588,6 +878,14 @@ function createServer() {
                         createdAt: new Date().toISOString()
                     };
                     chat.messages.push(savedMessage);
+                    userData.chatLogs = Array.isArray(userData.chatLogs) ? userData.chatLogs : [];
+                    userData.chatLogs.push({
+                        ...savedMessage,
+                        chatId: chat.id,
+                        senderName: typeof sender.username === "string"
+                            ? sender.username.trim()
+                            : "Användare"
+                    });
                     return savedMessage;
                 });
                 if (!message) {

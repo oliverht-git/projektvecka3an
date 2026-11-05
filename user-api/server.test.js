@@ -11,6 +11,7 @@ let baseUrl;
 before(async () => {
     temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "lbsradarn-users-"));
     process.env.USER_FILE = path.join(temporaryDirectory, "user.json");
+    process.env.ADMIN_TOKEN = "test-admin-token";
     const { createServer } = require("./server");
     server = createServer();
     await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -139,6 +140,7 @@ test("does not return duplicate accounts in the profile list", async () => {
     const { profiles } = await profilesResponse.json();
     assert.equal(profiles.filter(profile => profile.username === "Duplicate").length, 1);
 });
+
 
 test("sends profile requests and accepts them from the recipient profile", async () => {
     for (const [email, username] of [
@@ -296,4 +298,169 @@ test("removes a friend and deletes the shared conversation for both users", asyn
         `${chatUrl}?email=${encodeURIComponent("friend-two@example.com")}`
     );
     assert.equal(removedChatResponse.status, 404);
+});
+
+test("reports profile pictures and chat messages and protects the admin report log", async () => {
+    for (const [email, username] of [
+        ["reporter@example.com", "Reporter"],
+        ["reported@example.com", "Reported User"]
+    ]) {
+        const loginResponse = await fetch(`${baseUrl}/api/users/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, username })
+        });
+        assert.equal(loginResponse.status, 200);
+    }
+
+    const profilePicture = "data:image/jpeg;base64,/9j/2Q==";
+    const pictureResponse = await fetch(`${baseUrl}/api/users/profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reported@example.com", profilePicture })
+    });
+    assert.equal(pictureResponse.status, 200);
+
+    const profilesResponse = await fetch(
+        `${baseUrl}/api/users/profiles?exclude=${encodeURIComponent("reporter@example.com")}`
+    );
+    const { profiles } = await profilesResponse.json();
+    const reportedProfile = profiles.find(profile => profile.username === "Reported User");
+    assert.ok(reportedProfile);
+
+    const profileReportResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            reporterEmail: "reporter@example.com",
+            targetType: "profile",
+            targetId: reportedProfile.id,
+            reason: "olämplig profilbild",
+            details: "Anmäld profilbild"
+        })
+    });
+    assert.equal(profileReportResponse.status, 201);
+
+    const requestResponse = await fetch(`${baseUrl}/api/users/requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromEmail: "reporter@example.com", toId: reportedProfile.id })
+    });
+    assert.equal(requestResponse.status, 200);
+    const incomingResponse = await fetch(
+        `${baseUrl}/api/users/requests?email=${encodeURIComponent("reported@example.com")}`
+    );
+    const { requests } = await incomingResponse.json();
+    const acceptResponse = await fetch(`${baseUrl}/api/users/requests/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "reported@example.com", requestId: requests[0].id })
+    });
+    assert.equal(acceptResponse.status, 200);
+
+    const chatsResponse = await fetch(
+        `${baseUrl}/api/chats?email=${encodeURIComponent("reporter@example.com")}`
+    );
+    const { chats } = await chatsResponse.json();
+    const chatUrl = `${baseUrl}/api/chats/${chats[0].id}/messages`;
+    for (const [email, text] of [
+        ["reporter@example.com", "Tidigare meddelande"],
+        ["reported@example.com", "Meddelandet som anmäls"]
+    ]) {
+        const messageResponse = await fetch(chatUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, text })
+        });
+        assert.equal(messageResponse.status, 201);
+    }
+    const chatMessagesResponse = await fetch(
+        `${chatUrl}?email=${encodeURIComponent("reporter@example.com")}`
+    );
+    const { messages } = await chatMessagesResponse.json();
+    const reportedMessage = messages.find(message => message.text === "Meddelandet som anmäls");
+    assert.ok(reportedMessage);
+
+    const messageReportResponse = await fetch(`${baseUrl}/api/reports`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            reporterEmail: "reporter@example.com",
+            targetType: "message",
+            targetId: reportedMessage.id,
+            reason: "trakasserier",
+            details: "Anmält chattmeddelande"
+        })
+    });
+    assert.equal(messageReportResponse.status, 201);
+
+    const unauthorizedResponse = await fetch(`${baseUrl}/api/admin/reports`);
+    assert.equal(unauthorizedResponse.status, 401);
+    const invalidTokenResponse = await fetch(`${baseUrl}/api/admin/reports`, {
+        headers: { Authorization: "Bearer wrong-token" }
+    });
+    assert.equal(invalidTokenResponse.status, 401);
+
+    const adminResponse = await fetch(`${baseUrl}/api/admin/reports`, {
+        headers: { Authorization: "Bearer test-admin-token" }
+    });
+    assert.equal(adminResponse.status, 200);
+    assert.equal(adminResponse.headers.get("cache-control"), "no-store");
+    const { reports } = await adminResponse.json();
+    const profileReport = reports.find(report => report.targetType === "profile");
+    const messageReport = reports.find(report => report.targetType === "message");
+    assert.equal(profileReport.profilePicture, profilePicture);
+    assert.equal(messageReport.messageText, "Meddelandet som anmäls");
+    assert.deepEqual(
+        messageReport.chatLog.map(message => message.text),
+        ["Tidigare meddelande", "Meddelandet som anmäls"]
+    );
+
+    const statusResponse = await fetch(
+        `${baseUrl}/api/admin/reports/${encodeURIComponent(messageReport.id)}/status`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: "Bearer test-admin-token",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "reviewed" })
+        }
+    );
+    assert.equal(statusResponse.status, 200);
+});
+
+test("generates and prints an admin key when one is not configured", async () => {
+    const previousAdminToken = process.env.ADMIN_TOKEN;
+    const previousConsoleLog = console.log;
+    let startupMessage = "";
+    let generatedServer;
+    try {
+        delete process.env.ADMIN_TOKEN;
+        console.log = message => {
+            startupMessage = message;
+        };
+        generatedServer = require("./server").createServer();
+        await new Promise(resolve => generatedServer.listen(0, "127.0.0.1", resolve));
+
+        const keyMatch = startupMessage.match(/^Adminnyckel \(kopiera denna\): ([a-f0-9]{64})$/);
+        assert.ok(keyMatch, "server startup should print its generated admin key");
+        const response = await fetch(
+            `http://127.0.0.1:${generatedServer.address().port}/api/admin/reports`,
+            { headers: { Authorization: `Bearer ${keyMatch[1]}` } }
+        );
+        assert.equal(response.status, 200);
+    } finally {
+        if (generatedServer && generatedServer.listening) {
+            await new Promise((resolve, reject) => {
+                generatedServer.close(error => error ? reject(error) : resolve());
+            });
+        }
+        console.log = previousConsoleLog;
+        if (previousAdminToken === undefined) {
+            delete process.env.ADMIN_TOKEN;
+        } else {
+            process.env.ADMIN_TOKEN = previousAdminToken;
+        }
+    }
 });

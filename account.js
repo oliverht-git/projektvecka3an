@@ -186,25 +186,32 @@ if (profileCard) {
     const profileCardFeedback = document.getElementById("profile-card-feedback");
     const yesButton = document.getElementById("yes");
     const noButton = document.getElementById("no");
+    const reportProfileButton = document.getElementById("report-profile-button");
     let profiles = [];
     let currentProfileIndex = 0;
     let isSendingRequest = false;
 
     function showNextProfile() {
-        if (profiles.length === 0) {
+        if (currentProfileIndex >= profiles.length) {
             profileCard.hidden = true;
-            profileCardStatus.textContent = "Det finns inga andra profiler ännu.";
+            if (reportProfileButton) {
+                reportProfileButton.hidden = true;
+            }
+            profileCardStatus.textContent = profiles.length
+                ? "Du har sett alla tillgängliga profiler."
+                : "Det finns inga nya profiler att visa just nu.";
             yesButton.disabled = true;
             noButton.disabled = true;
             return;
         }
 
-        if (currentProfileIndex >= profiles.length) {
-            currentProfileIndex = 0;
-        }
-
         const profile = profiles[currentProfileIndex];
         profileCard.hidden = false;
+        if (reportProfileButton) {
+            reportProfileButton.dataset.reportTargetId = profile.id;
+            reportProfileButton.dataset.reportTargetName = profile.username;
+            reportProfileButton.hidden = false;
+        }
         profileCardName.textContent = profile.username;
         profileCardFeedback.textContent = "";
         profileCardPicture.onerror = function() {
@@ -251,6 +258,7 @@ if (profileCard) {
                 seenProfileIds.add(profile.id);
                 return true;
             });
+            currentProfileIndex = 0;
             showNextProfile();
         } catch (error) {
             console.error("Kunde inte hämta profiler:", error);
@@ -264,8 +272,8 @@ if (profileCard) {
             return;
         }
 
-        const account = getActiveAccount();
         const profile = profiles[currentProfileIndex];
+        const account = getActiveAccount();
         isSendingRequest = true;
         yesButton.disabled = true;
         noButton.disabled = true;
@@ -288,18 +296,57 @@ if (profileCard) {
         } catch (error) {
             console.error("Kunde inte skicka förfrågan:", error);
             profileCardFeedback.textContent = "Förfrågan kunde inte skickas.";
+            isSendingRequest = false;
+            yesButton.disabled = false;
+            noButton.disabled = false;
+            return;
+        }
+
+        profiles.splice(currentProfileIndex, 1);
+        if (currentProfileIndex >= profiles.length) {
+            await loadProfiles();
+        } else {
+            showNextProfile();
+        }
+        isSendingRequest = false;
+    });
+    noButton.addEventListener("click", async function() {
+        if (isSendingRequest || currentProfileIndex >= profiles.length) {
+            return;
+        }
+
+        const account = getActiveAccount();
+        const profile = profiles[currentProfileIndex];
+        isSendingRequest = true;
+        yesButton.disabled = true;
+        noButton.disabled = true;
+        profileCardFeedback.textContent = "Sparar...";
+
+        try {
+            const response = await fetch("/api/users/skip", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: account.email, targetId: profile.id })
+            });
+            if (!response.ok) {
+                throw new Error(`Servern svarade med status ${response.status}.`);
+            }
+        } catch (error) {
+            console.error("Kunde inte spara nekandet:", error);
+            profileCardFeedback.textContent = "Valet kunde inte sparas. Försök igen.";
+            isSendingRequest = false;
+            yesButton.disabled = false;
+            noButton.disabled = false;
+            return;
         }
 
         currentProfileIndex += 1;
-        isSendingRequest = false;
-        window.setTimeout(showNextProfile, 700);
-    });
-    noButton.addEventListener("click", function() {
-        if (profiles.length === 0) {
-            return;
+        if (currentProfileIndex >= profiles.length) {
+            await loadProfiles();
+        } else {
+            showNextProfile();
         }
-        currentProfileIndex += 1;
-        showNextProfile();
+        isSendingRequest = false;
     });
 
     loadProfiles();

@@ -159,6 +159,16 @@ async function loadMessages() {
             time.dateTime = message.createdAt;
             time.textContent = formatMessageTime(message.createdAt);
             bubble.append(text, time);
+            if (message.senderId !== result.userId) {
+                const reportButton = document.createElement("button");
+                reportButton.type = "button";
+                reportButton.className = "report-button report-message-button";
+                reportButton.textContent = "Anmäl meddelande";
+                reportButton.dataset.reportType = "message";
+                reportButton.dataset.reportTargetId = message.id;
+                reportButton.dataset.reportTargetName = activeChatName.textContent;
+                bubble.append(reportButton);
+            }
             messageList.append(bubble);
         });
 

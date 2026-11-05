@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LBSradarn</title>
     <link rel="stylesheet" href="chatt.css">
+    <link rel="stylesheet" href="report.css">
 </head>
 <body>
     <header class="chat-header">
@@ -37,7 +38,30 @@
             </div>
         </section>
     </main>
+    <dialog id="report-dialog" class="report-dialog" aria-labelledby="report-dialog-title">
+        <form id="report-form">
+            <h2 id="report-dialog-title">Anmäl meddelande</h2>
+            <p id="report-subject"></p>
+            <label for="report-reason">Anledning</label>
+            <select id="report-reason" name="reason" required>
+                <option value="">Välj en anledning</option>
+                <option value="olämplig profilbild">Olämplig profilbild</option>
+                <option value="trakasserier">Trakasserier</option>
+                <option value="hot">Hot</option>
+                <option value="spam">Spam</option>
+                <option value="annat">Annat</option>
+            </select>
+            <label for="report-details">Beskrivning (valfri, max 500 tecken)</label>
+            <textarea id="report-details" name="details" maxlength="500" rows="4"></textarea>
+            <p id="report-status" role="status"></p>
+            <div class="report-dialog-actions">
+                <button id="cancel-report-button" type="button">Avbryt</button>
+                <button id="submit-report-button" type="submit">Skicka anmälan</button>
+            </div>
+        </form>
+    </dialog>
     <script src="account.js"></script>
     <script src="chat.js"></script>
+    <script src="report.js"></script>
 </body>
 </html>

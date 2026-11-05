@@ -1,0 +1,159 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #101010;
+    color: #f5f5f5;
+    font: 16px Arial, sans-serif;
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px max(20px, calc((100vw - 1000px) / 2));
+    border-bottom: 1px solid #444;
+}
+
+.admin-header h1 {
+    margin: 0 auto 0 0;
+}
+
+.admin-header a {
+    color: #fff;
+}
+
+main {
+    width: min(100% - 32px, 1000px);
+    margin: 32px auto;
+}
+
+.admin-panel {
+    padding: 22px;
+    border: 1px solid #444;
+    border-radius: 12px;
+    background: #1b1b1b;
+}
+
+#admin-login-form {
+    display: grid;
+    gap: 10px;
+    width: min(100%, 420px);
+}
+
+input,
+button {
+    padding: 10px 12px;
+    border: 1px solid #777;
+    border-radius: 7px;
+    background: #252525;
+    color: #fff;
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.reports-heading,
+.report-card-header,
+.report-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.report-card {
+    margin-top: 16px;
+    padding: 18px;
+    border: 1px solid #4d4d4d;
+    border-radius: 10px;
+    background: #222;
+}
+
+.report-card h3,
+.report-card p {
+    overflow-wrap: anywhere;
+}
+
+.report-card h3 {
+    margin: 0;
+}
+
+.report-card img {
+    display: block;
+    width: min(100%, 320px);
+    max-height: 320px;
+    margin: 12px 0;
+    border-radius: 8px;
+    object-fit: contain;
+    background: #111;
+}
+
+.report-card blockquote {
+    margin: 12px 0;
+    padding: 12px;
+    border-left: 3px solid #aaa;
+    background: #171717;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.report-log {
+    max-height: 360px;
+    overflow: auto;
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 8px;
+}
+
+.report-log-entry {
+    padding: 8px 0;
+    border-bottom: 1px solid #3b3b3b;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.report-log-entry:last-child {
+    border-bottom: 0;
+}
+
+.report-log-entry time,
+.report-status {
+    color: #bbb;
+    font-size: 13px;
+}
+
+.report-card-actions {
+    justify-content: flex-start;
+    margin-top: 16px;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    .admin-header {
+        flex-wrap: wrap;
+    }
+
+    .admin-header h1 {
+        width: 100%;
+    }
+
+    .report-card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

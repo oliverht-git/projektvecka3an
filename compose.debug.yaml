@@ -6,6 +6,7 @@ services:
       dockerfile: ./Dockerfile
     environment:
       PORT: 3006
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     ports:
       - 3006:3006
     volumes:

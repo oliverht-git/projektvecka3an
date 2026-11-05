@@ -6,5 +6,7 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - 3006:3006
+    environment:
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
     volumes:
       - ./user.json:/app/user.json

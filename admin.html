@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin – LBSradarn</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <header class="admin-header">
+        <h1>Rapporter</h1>
+        <a href="main.html">Tillbaka till sidan</a>
+        <button id="admin-logout" type="button" hidden>Logga ut</button>
+    </header>
+    <main>
+        <section id="admin-login-panel" class="admin-panel">
+            <h2>Admininloggning</h2>
+            <p>Adminnyckeln skrivs ut i terminalen när servern startas.</p>
+            <form id="admin-login-form">
+                <label for="admin-token">Adminnyckel</label>
+                <input id="admin-token" type="password" autocomplete="current-password" required>
+                <button type="submit">Logga in</button>
+            </form>
+            <p id="admin-login-status" role="status"></p>
+        </section>
+        <section id="admin-reports-panel" class="admin-panel" hidden>
+            <div class="reports-heading">
+                <h2>Inkomna anmälningar</h2>
+                <button id="refresh-reports" type="button">Uppdatera</button>
+            </div>
+            <p id="admin-reports-status" role="status">Laddar anmälningar...</p>
+            <div id="admin-reports-list"></div>
+        </section>
+    </main>
+    <script src="admin.js"></script>
+</body>
+</html>
