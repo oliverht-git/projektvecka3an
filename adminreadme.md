@@ -11,6 +11,7 @@ Du kan också ange en egen `ADMIN_TOKEN` innan servern startas. I PowerShell:
 ```powershell
 $env:ADMIN_TOKEN = node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 npm start
+ctrl c för att stänga av servern
 ```
 
 Nyckeln sparas bara i webbläsarens aktuella session. Om servern startas med Docker Compose skickas miljövariabeln `ADMIN_TOKEN` vidare från värddatorn. Utan en egen nyckel skrivs den automatiskt skapade nyckeln ut i serverns logg.
