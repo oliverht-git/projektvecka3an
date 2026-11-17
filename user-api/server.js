@@ -15,6 +15,13 @@ function sendJson(response, statusCode, data) {
     response.end(JSON.stringify(data));
 }
 
+function isPasswordHash(value) {
+    return typeof value === "string" && (
+        /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value)
+        || /^pbkdf2-sha256\$600000\$[A-Za-z0-9+/]+={0,2}\$[A-Za-z0-9+/]+={0,2}$/.test(value)
+    );
+}
+
 function authorizeAdmin(request, response, adminToken) {
     const authorization = request.headers.authorization || "";
     const suppliedToken = authorization.startsWith("Bearer ")
@@ -502,6 +509,11 @@ function createServer() {
                     sendJson(response, 400, { error: "Email is required." });
                     return;
                 }
+                const passwordHash = body && body.passwordHash;
+                if (passwordHash !== undefined && !isPasswordHash(passwordHash)) {
+                    sendJson(response, 400, { error: "Password hash has an invalid format." });
+                    return;
+                }
 
                 const lastLogin = new Date().toISOString();
                 await updateUsers(users => {
@@ -511,8 +523,15 @@ function createServer() {
                         existingUser.username = username;
                         existingUser.active = true;
                         existingUser.lastLogin = lastLogin;
+                        if (passwordHash !== undefined) {
+                            existingUser.passwordHash = passwordHash;
+                        }
                     } else {
-                        users.push({ id: randomUUID(), email, username, active: true, lastLogin });
+                        const user = { id: randomUUID(), email, username, active: true, lastLogin };
+                        if (passwordHash !== undefined) {
+                            user.passwordHash = passwordHash;
+                        }
+                        users.push(user);
                     }
                 });
                 sendJson(response, 200, { ok: true });

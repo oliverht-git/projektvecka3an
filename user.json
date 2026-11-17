@@ -1,4 +1,13 @@
 {
+  "_description": {
+    "users": "Användarprofiler och kontostatus. passwordHash är en bcrypt- eller äldre PBKDF2-hash, aldrig lösenordet i klartext. Filen ska hållas privat.",
+    "requests": "Vänförfrågningar mellan användare, inklusive deras status och tidpunkter.",
+    "chats": "Konversationer som hör till accepterade vänförfrågningar.",
+    "skips": "Användare som har hoppats över i profilvisningen.",
+    "chatLogs": "Enskilda chattmeddelanden med avsändare, konversation och tidpunkt.",
+    "reports": "Användarrapporter och tillhörande modereringsinformation.",
+    "userBlocks": "Blockeringar mellan användare, ofta kopplade till en rapport."
+  },
   "users": [],
   "requests": [],
   "chats": [],

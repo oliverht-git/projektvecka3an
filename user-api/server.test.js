@@ -29,7 +29,11 @@ test("records logins, logout status, and account deletion", async () => {
     const loginResponse = await fetch(`${baseUrl}/api/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "Test@Example.com", username: "Test User" })
+        body: JSON.stringify({
+            email: "Test@Example.com",
+            username: "Test User",
+            passwordHash: "$2b$10$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0"
+        })
     });
     assert.equal(loginResponse.status, 200);
 
@@ -38,7 +42,18 @@ test("records logins, logout status, and account deletion", async () => {
     assert.equal(userData.users[0].email, "test@example.com");
     assert.equal(userData.users[0].username, "Test User");
     assert.equal(userData.users[0].active, true);
+    assert.equal(
+        userData.users[0].passwordHash,
+        "$2b$10$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0"
+    );
     assert.ok(Number.isFinite(Date.parse(userData.users[0].lastLogin)));
+
+    const invalidHashResponse = await fetch(`${baseUrl}/api/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "invalid@example.com", passwordHash: "plaintext" })
+    });
+    assert.equal(invalidHashResponse.status, 400);
 
     const logoutResponse = await fetch(`${baseUrl}/api/users/logout`, {
         method: "POST",

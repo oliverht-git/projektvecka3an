@@ -213,7 +213,8 @@ loginForm.addEventListener("submit", async function(event) {
                     email: normalizedEmail,
                     username: typeof account.username === "string" && account.username.trim()
                         ? account.username.trim()
-                        : normalizedEmail
+                        : normalizedEmail,
+                    passwordHash: account.passwordHash
                 })
             });
             if (!response.ok) {
