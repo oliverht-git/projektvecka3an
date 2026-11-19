@@ -41,3 +41,7 @@ skapa en ux/ui design som ser och är responsiv till varje input man gör på de
 # försöka skapa ett sätt att ringa personer
 
 ge personer möjligheten att ha samtal i sidan / appen
+
+# fixa swipe
+
+fixa en swipe funktion för mitten delen
