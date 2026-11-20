@@ -49,3 +49,7 @@ fixa en swipe funktion för mitten delen
 # använda react
 
 optimera med react
+
+# notifikationer
+
+skapa bättre notifikations system
