@@ -45,3 +45,7 @@ ge personer möjligheten att ha samtal i sidan / appen
 # fixa swipe
 
 fixa en swipe funktion för mitten delen
+
+# använda react
+
+optimera med react
