@@ -8,7 +8,7 @@ Måste fixa ett sätt där jag kan lagra informationen som kommer på sidan för
 
 # fixa en regel sida
 
-skapa regler man måste följa annars kommer konton bli terminerade
+skapa regler man måste följa annars kommer konton bli terminerade terms of servise
 
 # utveckla på rapporteringsystemet
 
@@ -53,3 +53,5 @@ optimera med react
 # notifikationer
 
 skapa bättre notifikations system
+
+# 
